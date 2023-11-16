@@ -291,7 +291,7 @@ def raw2outputs(raw, z_vals, rays_d, raw_noise_std=0, white_bkgd=False, pytest=F
             noise = np.random.rand(*list(raw[...,3].shape)) * raw_noise_std
             noise = torch.Tensor(noise)
     # 这边给颜色加了噪声
-    alpha = raw2alpha(raw[...,3] + noise, dists)  # [N_rays, N_samples] 给raw中每个颜色信息加上噪声，然后再用raw和dist作为输入执行上面那个匿名函数
+    alpha = raw2alpha(raw[...,3] + noise, dists)  # [N_rays, N_samples] 给raw中每个体积密度信息加上噪声，然后再用raw和dist作为输入执行上面那个匿名函数
     # weights = alpha * tf.math.cumprod(1.-alpha + 1e-10, -1, exclusive=True)
     weights = alpha * torch.cumprod(torch.cat([torch.ones((alpha.shape[0], 1)), 1.-alpha + 1e-10], -1), -1)[:, :-1] #[256,64] 计算权重w，根据论文里那个wi的公式
     rgb_map = torch.sum(weights[...,None] * rgb, -2)  # [N_rays, 3] 使用上面算到的权重对对应点的颜色值加权求和，得到每一条射线的颜色
@@ -439,7 +439,7 @@ def config_parser():
                         help='layers in fine network')
     parser.add_argument("--netwidth_fine", type=int, default=256, 
                         help='channels per layer in fine network')
-    parser.add_argument("--N_rand", type=int, default=32*32*4, #
+    parser.add_argument("--N_rand", type=int, default=32*32*4, 
                         help='batch size (number of random rays per gradient step)')
     parser.add_argument("--lrate", type=float, default=5e-4, 
                         help='learning rate')

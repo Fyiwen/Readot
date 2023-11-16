@@ -35,7 +35,7 @@ class Embedder:  # 这个类有了生成嵌入器需要的参数作为输入后�
             
         for freq in freq_bands:  # 遍历频率函数eg：[2^0,2^1,...,2^(L-1)]
             for p_fn in self.kwargs['periodic_fns']: # 遍历周期函数sin和cos
-                embed_fns.append(lambda x, p_fn=p_fn, freq=freq : p_fn(x * freq)) # 将一个完整的位置编码函数中每一部分的嵌入函数p_fn(x * freq)添加到embed_fns这个列表中。pi咋没了？？？
+                embed_fns.append(lambda x, p_fn=p_fn, freq=freq : p_fn(x * freq)) # 将一个完整的位置编码函数中每一部分的嵌入函数p_fn(x * freq)添加到embed_fns这个列表中。pi咋没了？？？理论上用Transformer那个位置编码是要有pi的
                 out_dim += d # 每做一次嵌入嵌入就增加d个输出维度
                     
         self.embed_fns = embed_fns #可以完成位置编码的函数
@@ -124,11 +124,11 @@ class NeRF(nn.Module): # nerf模型
         # Load pts_linears
         for i in range(self.D): # 对于self.pts_linears里面的D个线性层
             idx_pts_linears = 2 * i # 因为下面两行一次性要从weights里面拿走两个，所以这里索引从0开始，两个一弄
-            self.pts_linears[i].weight.data = torch.from_numpy(np.transpose(weights[idx_pts_linears]))  #将weights中对应索引的权重转换为张量并赋值给相应的线性层的weight.data和bias.data
+            self.pts_linears[i].weight.data = torch.from_numpy(np.transpose(weights[idx_pts_linears]))  #将weights中对应索引的权重转置之后转换为张量并赋值给相应的线性层的weight.data和bias.data
             self.pts_linears[i].bias.data = torch.from_numpy(np.transpose(weights[idx_pts_linears+1]))
         
         # Load feature_linear
-        idx_feature_linear = 2 * self.D # 因为上面D个线性层用掉了2D个索引了，所以现在索引从2D开始
+        idx_feature_linear = 2 * self.D # 因为上面D个线性层，每个线性层w和b，用掉了2D个索引了，所以现在索引从2D开始
         self.feature_linear.weight.data = torch.from_numpy(np.transpose(weights[idx_feature_linear]))
         self.feature_linear.bias.data = torch.from_numpy(np.transpose(weights[idx_feature_linear+1]))
 
@@ -195,7 +195,7 @@ def ndc_rays(H, W, focal, near, rays_o, rays_d):  # 把射线表示从相机坐�
 
 # Hierarchical sampling (section 5.2)
 def sample_pdf(bins, weights, N_samples, det=False, pytest=False): # 输入新的的中间的采样点的深度值，每个原来的采样点的权重，还需要再采样的点的个数，因为det=(perturb==0.)所以不扰动采样点他就是true，以及pytest
-    # bins[射线个数，每根射线上粗采样点数-1],weights[射线个数，没跟射线上粗采样点数-2]？？？？？？？？？？？
+    # bins[射线个数，每根射线上粗采样点数-1](因为是原来采样点的中心点所以少一个很正常),weights[射线个数，没跟射线上粗采样点数-2]？？？？？？？？？？？少两个（抛弃了最远和最近的两个值，下面cdf中会再补一个变成63和bins里面的63也是对应的）
     # Get pdf
     weights = weights + 1e-5 # prevent nans 给每个权重值加了一个很小的数【256，62】
     pdf = weights / torch.sum(weights, -1, keepdim=True)  # 【256，62】把权重值做了归一化，这样每个值可以看成是一个概率（如果这个权重乘颜色的话，也就是说一个射线上所有采样点颜色乘上对应的概率，得到整个射线的颜色）
